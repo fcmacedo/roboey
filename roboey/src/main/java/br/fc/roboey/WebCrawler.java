@@ -1,12 +1,11 @@
 package br.fc.roboey;
 
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.TimeUnit;
@@ -60,11 +59,13 @@ public class WebCrawler {
 
 	}
 
-	public String input(String razaoSocial, String uf, String faixa){
+	public List<String> input(String razaoSocial, String uf, String faixa){
 
-		String resultado=null;
+		
 		Select selectBox = null;
 		String pattern = null;
+		
+		List <String> res = new ArrayList<String>();
 
 		// times out after 60 seconds (devido ao tempo para digitar o captcha)
 		WebDriverWait wait = new WebDriverWait(driver, 60);
@@ -120,28 +121,37 @@ public class WebCrawler {
 		try{
 
 			//captura linha da tabela resultado com CNPJ, DESCRICAO e VALOR
+			String cnpj;
+			String valor;
+			
 			pattern = "table[id='listaDevedoresForm:devedoresTable'] > tbody > tr";
 			//wait.until(presenceOfElementLocated(By.cssSelector(pattern)));
 
 			List<WebElement> we = driver.findElements(By.cssSelector(pattern));
-
+			
 			for(WebElement element : we){
-				resultado = element.getText().replace(" ", ";");
-				break;//obtem apenas o ultimo processo
+				cnpj = element.findElement(By.cssSelector("td[class='rich-table-cell SemQuebra Esquerda']")).getText();
+				valor = element.findElement(By.cssSelector("td[class='rich-table-cell Direita LarguraMinima']")).getText();		
+				res.add(cnpj+ ";" + valor);
 			}
+			
+			
+			//pattern = "table[id='listaDevedoresForm:devedoresTable'] > tbody > tr > td[class='rich-table-cell SemQuebra Esquerda']";
+			//String cnpj = (driver.findElement(By.cssSelector(pattern))).getText();
+			
+			//pattern = "table[id='listaDevedoresForm:devedoresTable'] > tbody > tr > td[class='rich-table-cell Direita LarguraMinima']";
+			//String valor = (driver.findElement(By.cssSelector(pattern))).getText();
+			
+			//resultado = cnpj + ";" + valor;
 
 		}catch(NoSuchElementException e) {
-			//
-			resultado="Nenhum resultado encontrado;;";
-
+			//sem resultado
 		}
 		catch(Exception e) {
-			//
-			resultado="Nenhum resultado encontrado;;";
-
+			//sem resultado
 		}
 
-		return resultado;
+		return res;
 
 
 
@@ -218,6 +228,7 @@ public class WebCrawler {
 		try {
 			inputStream = new FileInputStream(fileName);
 			fileContents = IOUtils.toString(inputStream);
+			inputStream.close();
 		}
 		catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
@@ -228,7 +239,7 @@ public class WebCrawler {
 			e.printStackTrace();
 
 		}finally {
-			inputStream.close();
+			if(inputStream!=null) inputStream.close();
 		}
 
 		return fileContents;
@@ -243,14 +254,11 @@ public class WebCrawler {
 		String devedores[] = webScrapper.getFile("devedores.csv").split("\n");
 		String processados = webScrapper.getFile("devedores_processados.csv");
 
-
-		String field[], resultado;
+		List<String> resultado;
+		
+		String field[];
 
 		FileWriter file;
-		BufferedWriter buffw;
-
-
-
 
 
 		for(String line : devedores){
@@ -263,8 +271,9 @@ public class WebCrawler {
 				if(processados.indexOf(field[2]) < 0 ){
 
 					try{
-						file = new FileWriter("devedores_processados.csv");
-						buffw = new BufferedWriter(file);
+						File arquivo = new File("devedores_processados.csv");
+						file = new FileWriter(arquivo,true);
+						//buffw = new BufferedWriter(file);
 
 						//abre o site
 						webScrapper.openTestSite();
@@ -273,11 +282,19 @@ public class WebCrawler {
 
 						//executa a pesquisa
 						resultado = webScrapper.input(field[2], field[4],"DE_10_MILHOES_ATE_100_MILHOES");
-
-						System.out.println(resultado);
-
-						buffw.write(resultado + "\n");
-						buffw.close();
+						
+						if(resultado.size() == 0 ){
+							
+							resultado.add("Nenhum resultado encontrado;");
+						}
+						
+						for(String res : resultado){
+							
+							file.write(field[0]+"/"+field[1]+";"+field[2]+";"+res + "\n");
+							
+						}
+						
+						
 						file.close();
 
 					}catch(IOException e){
@@ -296,9 +313,6 @@ public class WebCrawler {
 			}
 
 		}
-
-
-
 
 		webScrapper.closeBrowser();
 	}
