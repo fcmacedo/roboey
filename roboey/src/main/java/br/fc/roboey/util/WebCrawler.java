@@ -85,9 +85,8 @@ public class WebCrawler {
 		//captura linha da tabela resultado com CNPJ, DESCRICAO e VALOR
 		try{
 
-			String cnpj;
-			String valor;
-
+			String cnpj, rzSocial, valor;
+			
 			pattern = "table[id='listaDevedoresForm:devedoresTable'] > tbody > tr";
 			//wait.until(presenceOfElementLocated(By.cssSelector(pattern)));
 
@@ -95,8 +94,9 @@ public class WebCrawler {
 
 			for(WebElement element : we){
 				cnpj = element.findElement(By.cssSelector("td[class='rich-table-cell SemQuebra Esquerda']")).getText();
+				rzSocial = element.findElement(By.cssSelector("td[class='rich-table-cell Esquerda']")).getText();
 				valor = element.findElement(By.cssSelector("td[class='rich-table-cell Direita LarguraMinima']")).getText();		
-				res.add(cnpj+ ";" + valor);
+				res.add(cnpj+ ";" + rzSocial + ";" +valor);
 			}
 
 
