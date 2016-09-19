@@ -8,7 +8,7 @@ public class Config{
 
 	public static Properties getProp() throws IOException {
 		Properties props = new Properties();
-		FileInputStream file = new FileInputStream("conf.properties");
+		FileInputStream file = new FileInputStream("config.properties");
 		props.load(file);
 		return props;
 
