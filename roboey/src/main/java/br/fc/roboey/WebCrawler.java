@@ -1,10 +1,9 @@
 package br.fc.roboey;
 
-import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -136,7 +135,11 @@ public class WebCrawler {
 			resultado="Nenhum resultado encontrado;;";
 
 		}
+		catch(Exception e) {
+			//
+			resultado="Nenhum resultado encontrado;;";
 
+		}
 
 		return resultado;
 
@@ -204,68 +207,51 @@ public class WebCrawler {
 		};
 	}
 
-	public boolean setFileOutput(String result, String fileNameTarget){
 
-		try{
-			FileWriter arq = new FileWriter(fileNameTarget);
-			PrintWriter gravarArq = new PrintWriter(arq);
-
-			gravarArq.printf(result);
-
-
-			arq.close();
-
-		} catch (IOException e) {
-			System.err.printf("Erro na abertura do arquivo: %s.\n",
-					e.getMessage());
-		}
-
-		return true;
-	}
 
 	//Carrega arquivo em StringBuilder
 	public String getFile(String fileName) throws IOException {
 
 		String fileContents = null;
-		
+
 		FileInputStream inputStream = null;
 		try {
 			inputStream = new FileInputStream(fileName);
-	        fileContents = IOUtils.toString(inputStream);
-	    }
-	    catch (FileNotFoundException e) {
+			fileContents = IOUtils.toString(inputStream);
+		}
+		catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} 
 		catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		
+
 		}finally {
-	        inputStream.close();
-	    }
-		
+			inputStream.close();
+		}
+
 		return fileContents;
 
 	}
 
-	
-	public boolean isProcessado(){
-		
-		
-		
-		return false;
-	}
-	
+
 
 	public static void main(String[] args) throws IOException {
 		WebCrawler webScrapper = new WebCrawler();
 
 		String devedores[] = webScrapper.getFile("devedores.csv").split("\n");
+		String processados = webScrapper.getFile("devedores_processados.csv");
+
+
 		String field[], resultado;
 
-		FileWriter file = new FileWriter("resultado.csv");
-		PrintWriter sendFile = new PrintWriter(file);
+		FileWriter file;
+		BufferedWriter buffw;
+
+
+
+
 
 		for(String line : devedores){
 
@@ -273,20 +259,46 @@ public class WebCrawler {
 
 			if(field[2]!=null && field[4]!=null){
 
-				//abre o site
-				webScrapper.openTestSite();
+				//Se a razão social já foi processado, não executa
+				if(processados.indexOf(field[2]) < 0 ){
 
-				System.out.println("Processando >>> " + field[2] +"...");
-				
-				//executa a pesquisa
-				resultado = webScrapper.input(field[2], field[4],"DE_10_MILHOES_ATE_100_MILHOES");
-				sendFile.printf(resultado);
+					try{
+						file = new FileWriter("devedores_processados.csv");
+						buffw = new BufferedWriter(file);
+
+						//abre o site
+						webScrapper.openTestSite();
+
+						System.out.println("Processando >>> " + field[2] +"...");
+
+						//executa a pesquisa
+						resultado = webScrapper.input(field[2], field[4],"DE_10_MILHOES_ATE_100_MILHOES");
+
+						System.out.println(resultado);
+
+						buffw.write(resultado + "\n");
+						buffw.close();
+						file.close();
+
+					}catch(IOException e){
+						e.printStackTrace();
+					}
+
+					catch(Exception e){
+						e.printStackTrace();
+					}
+					finally{
+
+					}
+
+				}
 
 			}
 
 		}
-		
-		file.close();
+
+
+
 
 		webScrapper.closeBrowser();
 	}
