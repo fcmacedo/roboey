@@ -9,9 +9,10 @@ import java.util.concurrent.TimeUnit;
 import org.apache.http.conn.HttpHostConnectException;
 import org.openqa.selenium.By;
 import org.openqa.selenium.InvalidElementStateException;
+import org.openqa.selenium.TimeoutException;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
-import org.openqa.selenium.firefox.FirefoxDriver;
+import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.remote.UnreachableBrowserException;
 import org.openqa.selenium.support.ui.ExpectedCondition;
 import org.openqa.selenium.support.ui.ExpectedConditions;
@@ -22,7 +23,10 @@ import org.openqa.selenium.support.ui.WebDriverWait;
 
 public class WebCrawler {
 
-	public WebDriver driver = new FirefoxDriver();
+		
+	//public WebDriver driver = new FirefoxDriver();
+	
+	public WebDriver driver = new ChromeDriver();
 
 	/**
 	 * Open the test website.
@@ -36,7 +40,7 @@ public class WebCrawler {
 	/**
 	 * Apply filter for search.
 	 */
-	public List<String> inputFilter(String razaoSocial, String uf, String faixa) throws ConnectException, HttpHostConnectException, UnreachableBrowserException, Exception{
+	public List<String> inputFilter(String faixa) throws ConnectException, HttpHostConnectException, UnreachableBrowserException, Exception{
 
 		Select selectBox = null;
 		String pattern = null;
@@ -45,23 +49,6 @@ public class WebCrawler {
 
 		// times out after 60 seconds (devido ao tempo para digitar o captcha)
 		WebDriverWait wait = new WebDriverWait(driver, 60);
-
-
-		//seleciona o radio button de pesquisa por nome
-		wait.until(ExpectedConditions.presenceOfElementLocated(By.id("listaDevedoresForm:radioTipoConsulta:1")));
-		driver.findElement(By.id("listaDevedoresForm:radioTipoConsulta:1")).click();
-
-
-		//preenche a razao social
-		wait.until(ExpectedConditions.elementToBeClickable(By.id("listaDevedoresForm:nomeInput")));
-		driver.findElement(By.id("listaDevedoresForm:nomeInput")).sendKeys(razaoSocial);
-
-		//preenche UF
-		if(!uf.equals("**")){
-			wait.until(ExpectedConditions.presenceOfElementLocated(By.id("listaDevedoresForm:ufInput")));
-			selectBox = new Select(driver.findElement(By.id("listaDevedoresForm:ufInput")));
-			selectBox.selectByValue(uf);
-		}
 
 		//define a faixa de pesquisa
 		wait.until(ExpectedConditions.presenceOfElementLocated(By.id("listaDevedoresForm:faixasInput")));
@@ -76,7 +63,6 @@ public class WebCrawler {
 		waitInsertInputCaptcha(driver.findElement(By.id("listaDevedoresForm:captcha")),wait);
 
 
-
 		//envia página de requisição
 		wait.until(ExpectedConditions.presenceOfElementLocated(By.id("listaDevedoresForm:consultarButton")));
 		driver.findElement(By.id("listaDevedoresForm:consultarButton")).click();
@@ -89,25 +75,47 @@ public class WebCrawler {
 			
 			pattern = "table[id='listaDevedoresForm:devedoresTable'] > tbody > tr";
 			//wait.until(presenceOfElementLocated(By.cssSelector(pattern)));
-
-			List<WebElement> we = driver.findElements(By.cssSelector(pattern));
-
-			for(WebElement element : we){
-				cnpj = element.findElement(By.cssSelector("td[class='rich-table-cell SemQuebra Esquerda']")).getText();
-				rzSocial = element.findElement(By.cssSelector("td[class='rich-table-cell Esquerda']")).getText();
-				valor = element.findElement(By.cssSelector("td[class='rich-table-cell Direita LarguraMinima']")).getText();		
-				res.add(cnpj+ ";" + rzSocial + ";" +valor);
+			boolean hasGrid = true;
+			while(hasGrid){
+				Thread.sleep(5000);
+				wait.until(ExpectedConditions.presenceOfElementLocated(By.cssSelector(pattern)));
+				List<WebElement> we = driver.findElements(By.cssSelector(pattern));
+				
+				
+				for(WebElement element : we){
+					
+					wait.until(ExpectedConditions.presenceOfElementLocated(By.cssSelector("td[class='rich-table-cell SemQuebra Esquerda']")));
+					cnpj = element.findElement(By.cssSelector("td[class='rich-table-cell SemQuebra Esquerda']")).getText();
+					wait.until(ExpectedConditions.presenceOfElementLocated(By.cssSelector("td[class='rich-table-cell Esquerda']")));
+					rzSocial = element.findElement(By.cssSelector("td[class='rich-table-cell Esquerda']")).getText();
+					wait.until(ExpectedConditions.presenceOfElementLocated(By.cssSelector("td[class='rich-table-cell Direita LarguraMinima']")));
+					valor = element.findElement(By.cssSelector("td[class='rich-table-cell Direita LarguraMinima']")).getText();		
+					res.add(cnpj+ ";" + rzSocial + ";" +valor);
+				}
+				
+				try{
+					Thread.sleep(5000);
+					wait.until(ExpectedConditions.presenceOfElementLocated(By.className("arrow-next")));
+					wait.until(ExpectedConditions.elementToBeClickable(By.className("arrow-next")));
+					driver.findElement(By.className("arrow-next")).click();
+				}catch(TimeoutException te ){
+					hasGrid=false;
+				}
+			
 			}
+			
+			
 
 
 		}catch(InvalidElementStateException e ){
-			System.err.println("Nenhum resultado encontrado...");
+			System.err.println("Nenhum resultado encontrado...A");
 		}
 		catch(NoSuchElementException e) {
-			System.err.println("Nenhum resultado encontrado...");
+			System.err.println("Nenhum resultado encontrado...B");
 		}
 		catch(Exception e) {
-			System.err.println("Nenhum resultado encontrado...");
+			e.printStackTrace();
+			System.err.println("Nenhum resultado encontrado...C");
 		}
 
 		return res;
